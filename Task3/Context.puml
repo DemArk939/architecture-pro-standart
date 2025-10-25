@@ -1,0 +1,40 @@
+@startuml
+title Диаграмма контекста
+
+top to bottom direction
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Person(newClient, "Новый клиент")
+Person(internetBankingClient, "Клиент интернет-банка")
+Person(callCenterManager, "Менеджер кол-центра")
+Person(frontOfficeManager, "Менеджер фронт-офиса")
+Person(backCenterManager, "Менеджер бек-офиса")
+
+System(website, "Сайт")
+System(internetBanking, "Интернет-банк")
+System(callCenter, "Система кол-центра")
+System(abs, "АБС")
+System(smsGateway, "СМС-шлюз")
+
+System_Ext(telecomOperator, "Телеком-оператор")
+
+newClient --> website : "Завести заявку"
+website --> callCenter : "Передача заявки"
+callCenterManager --> callCenter : "Обработка заявок"
+callCenterManager --> newClient : "Подтверждение заявки"
+callCenter --> abs : "Передача заявки"
+newClient --> frontOfficeManager : "Идентификация и подтверждение заявки"
+
+internetBankingClient --> internetBanking : "Завести заявку"
+internetBanking --> smsGateway : "Подтверждение операции"
+smsGateway --> telecomOperator : "Отправить СМС"
+telecomOperator --> internetBankingClient : "Прислать СМС клиенту"
+internetBanking --> abs : "Передача заявки"
+
+frontOfficeManager --> abs : "Обработка заявок"
+backCenterManager --> abs : "Обработка заявок"
+
+abs --> smsGateway : "Информирование о статусе заявки"
+
+@enduml
