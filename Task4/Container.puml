@@ -1,0 +1,36 @@
+@startuml
+title Диаграмма контейнеров
+
+top to bottom direction
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Person(callCenterManager, "Менеджер кол-центра")
+Person(outCallCenterManager, "Менеджер партнерского кол-центра")
+Person(creditManager, "Кредитный менеджер")
+
+System(depositProcess, "Передача ставок")
+
+System_Ext(emailSystem, "Электронная почта")
+System_Ext(outCallCenter, "Система партнерского кол-центра")
+
+Container_Boundary(depositProcess, "Передача ставок") {
+    Container(abs, "АБС", "Клиент на Delphi, СУБД на Oracle. Основная логика - процедуры на PL-SQL")
+    Container(callCenter, "Система кол-центра", "React.js, Java Spring Boot")
+    ContainerDb(callCenterDatabase, "База Данных кол-центра", "PostgreSQL")
+    ContainerQueue(callCenterBroker, "Брокер сообщений", "Kafka")
+}
+
+
+creditManager --> abs : "Расчет актуальных ставок"
+abs --> callCenterBroker : "Передача актуальных ставок"
+callCenterBroker --> callCenter : "Передача актуальных ставок"
+callCenter --> callCenterDatabase : "Сохранение актуальных ставок"
+callCenterManager --> callCenter : "Просмотр ставок"
+
+creditManager --> abs : "Получение файла актуальных ставок"
+creditManager --> emailSystem : "Передача файла актуальных ставок"
+emailSystem --> outCallCenterManager : "Получение файла актуальных ставок"
+outCallCenterManager --> outCallCenter : "Сохранение актуальных ставок"
+
+@enduml

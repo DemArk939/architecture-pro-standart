@@ -1,0 +1,74 @@
+@startuml
+title Диаграмма контейнеров
+
+top to bottom direction
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Person(newClient, "Новый клиент")
+Person(internetBankingClient, "Клиент интернет-банка")
+Person(callCenterManager, "Менеджер кол-центра")
+Person(frontOfficeManager, "Менеджер фронт-офиса")
+Person(backCenterManager, "Менеджер бек-офиса")
+
+System(internetBankingSystem, "Интернет-банк")
+System(websiteAndCallCenterSystem, "Сайт и кол-центр")
+System(smsGatewaySystem, "СМС-шлюз")
+
+Container(abs, "АБС", "Клиент на Delphi, СУБД на Oracle. Основная логика - процедуры на PL-SQL")
+
+
+System_Ext(telecomOperator, "Телеком-оператор")
+
+Container_Boundary(internetBankingSystem, "Интернет-банк") {
+    Container(internetBankingApiGateway, "API-шлюз", "Java, Spring")
+    Container(internetBanking, "Интернет-банк", "ASP.NET MVC 4.5 на основе .NET Framework 4.5")
+    ContainerDb(internetBankingDatabase, "База Данных интернет-банка", "MS SQL")
+    Container(depositService, "МС обработки депозитов", "Java, Spring")
+    ContainerDb(depositServiceDatabase, "База Данных депозитов", "PostgreSQL")
+    ContainerQueue(depositBroker, "Брокер сообщений", "Kafka")
+}
+
+Container_Boundary(websiteAndCallCenterSystem, "Сайт и кол-центр") {
+    Container(website, "Сайт", "PHP и React.js")
+    Container(callCenterApiGateway, "API-шлюз", "Java, Spring")
+    Container(callCenter, "Система кол-центра", "React.js, Java Spring Boot")
+    ContainerDb(callCenterDatabase, "База Данных кол-центра", "PostgreSQL")
+    ContainerQueue(callCenterBroker, "Брокер сообщений", "Kafka")
+}
+
+Container_Boundary(smsGatewaySystem, "СМС-шлюз") {
+    ContainerQueue(smsGatewayBroker, "Брокер сообщений", "Kafka")
+    Container(smsGateway, "СМС-шлюз")
+    ContainerDb(smsGatewayDatabase, "База Данных СМС-шлюза", "PostgreSQL")
+}
+
+newClient --> website : "Завести заявку"
+website --> callCenterApiGateway : "Передача заявки"
+callCenterApiGateway --> callCenter : "Передача заявки"
+callCenter --> callCenterDatabase : "Сохранение заявки"
+callCenterManager --> callCenter : "Обработка заявок"
+callCenterManager --> newClient : "Подтверждение заявки"
+callCenter --> callCenterBroker : "Передача заявки"
+callCenterBroker --> abs : "Передача заявки"
+newClient --> frontOfficeManager : "Идентификация и подтверждение заявки"
+
+internetBankingClient --> internetBankingApiGateway : "Завести заявку"
+internetBankingApiGateway --> internetBanking : "Завести заявку"
+internetBanking --> internetBankingDatabase : "Сохранение данных"
+internetBankingApiGateway --> depositService : "Создание заявки депозита"
+depositService --> depositServiceDatabase : "Сохраение заявок"
+depositService --> smsGatewayBroker : "Подтверждение операции"
+smsGatewayBroker --> smsGateway : "Передача сообщений"
+smsGateway --> telecomOperator : "Отправить СМС"
+telecomOperator --> internetBankingClient : "Прислать СМС клиенту"
+depositService --> depositBroker : "Передача заявки"
+depositBroker --> abs : "Передача заявки"
+
+smsGateway --> smsGatewayDatabase : "Хранение сообщений"
+
+frontOfficeManager --> abs : "Обработка заявок"
+backCenterManager --> abs : "Обработка заявок"
+
+abs --> smsGatewayBroker : "Информирование о статусе заявки"
+@enduml

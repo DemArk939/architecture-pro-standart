@@ -1,0 +1,82 @@
+@startuml
+title Диаграмма контейнеров
+
+top to bottom direction
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Person(newClient, "Новый клиент")
+Person(internetBankingClient, "Клиент интернет-банка")
+Person(frontOfficeManager, "Менеджер фронт-офиса")
+Person(creditManager, "Кредитный менеджер")
+
+System(bankingSystem, "Онлайн банк")
+System(creditConveyorSystem, "Кредитный конвейер")
+
+System_Ext(telecomOperator, "Телеком-оператор")
+System_Ext(creditBureau, "Бюро кредитных историй")
+
+System(smsGatewaySystem, "СМС-шлюз")
+
+
+Container_Boundary(bankingSystem, "Онлайн банк") {
+    Container(website, "Сайт", "PHP и React.js")
+    Container(absApiGateway, "API-шлюз", "Java, Spring")
+    Container(abs, "АБС", "Клиент на Delphi, СУБД на Oracle. Основная логика - процедуры на PL-SQL")
+    ContainerQueue(absBroker, "Брокер сообщений", "Kafka")
+    ContainerQueue(absStatusBroker, "Брокер сообщений", "Kafka")
+
+    Container(internetBankingApiGateway, "API-шлюз", "Java, Spring")
+    Container(internetBanking, "Интернет-банк", "ASP.NET MVC 4.5 на основе .NET Framework 4.5")
+    ContainerDb(internetBankingDatabase, "База Данных интернет-банка", "MS SQL")
+    Container(creditService, "МС обработки кредитов", "Java, Spring")
+    ContainerDb(creditServiceDatabase, "База Данных кредитов", "PostgreSQL")
+}
+
+Container_Boundary(smsGatewaySystem, "СМС-шлюз") {
+    ContainerQueue(smsGatewayBroker, "Брокер сообщений", "Kafka")
+    Container(smsGateway, "СМС-шлюз")
+    ContainerDb(smsGatewayDatabase, "База Данных СМС-шлюза", "PostgreSQL")
+}
+
+Container_Boundary(creditConveyorSystem, "СМС-шлюз") {
+    ContainerQueue(creditConveyorBroker, "Брокер сообщений", "Kafka")
+    Container(creditConveyor, "Кредитный конвейер", "BPM-система на Camunda, обработчики на Java")
+    ContainerDb(creditConveyorDatabase, "База Данных Кредитного конвейера", "Oracle")
+    Container(creditScoringSystem, "Система кредитного скоринга", "Python, REST API на Flask")
+    ContainerDb(creditScoringDatabase, "База Данных системы кредитного скоринга", "PostgreSQL")
+}
+
+
+newClient --> website : "Завести заявку"
+website --> absApiGateway : "Передача заявки"
+absApiGateway --> creditService : "Передача заявки"
+absBroker --> abs : "Передача заявки"
+abs --> creditConveyorBroker : "Передача заявки"
+creditConveyorBroker --> creditConveyor : "Передача заявки"
+creditConveyor --> creditScoringSystem : "Скоринг заявки"
+creditScoringSystem --> creditScoringDatabase : "Сохранение данных"
+creditScoringSystem --> creditBureau : "Скоринг заявки"
+creditManager --> creditConveyor : "Подтверждение заявки"
+creditConveyor --> creditConveyorDatabase : "Сохранение данных"
+creditConveyor --> absStatusBroker : "Передача статуса заявки"
+absStatusBroker --> abs : "Передача статуса заявки"
+abs --> smsGatewayBroker : "Передача статуса заявки"
+smsGatewayBroker --> smsGateway : "Передача сообщений"
+smsGateway --> smsGatewayDatabase : "Хранение сообщений"
+smsGateway --> telecomOperator : "Отправить СМС"
+telecomOperator --> newClient : "Прислать СМС клиенту"
+newClient --> frontOfficeManager : "Идентификация и подтверждение заявки"
+
+internetBankingClient --> internetBankingApiGateway : "Завести заявку"
+internetBankingApiGateway --> internetBanking : "Завести заявку"
+internetBanking --> internetBankingDatabase : "Сохранение данных"
+internetBankingApiGateway --> creditService : "Создание заявки кредитов"
+creditService --> creditServiceDatabase : "Сохранение заявок"
+creditService --> smsGatewayBroker : "Подтверждение операции"
+telecomOperator --> internetBankingClient : "Прислать СМС клиенту"
+creditService --> absBroker : "Передача заявки"
+
+frontOfficeManager --> abs : "Обработка заявок"
+
+@enduml
